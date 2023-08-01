@@ -26,12 +26,18 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('auth/request-key', [AuthController::class, 'sendEmail']);
 Route::put('auth/recover-password', [AuthController::class, 'resetPassowrd']);
+//change password
+Route::put('auth/{userId}/change-password', [AuthController::class, 'changePassword']);
 
 Route::resource('rooms', RoomController::class);
 Route::resource('users', UserController::class);
 Route::put('room-players/{roomId}/kick/{playerId}', [RoomPlayerController::class, 'kickPlayer']);
 Route::put('room-players/{roomId}/leave/{playerId}', [RoomPlayerController::class, 'leftPlayer']);
 Route::put('room-players/{roomId}/join-player/{playerId}', [RoomPlayerController::class, 'joinPlayer']);
+
+// join by room code
+Route::post('player/{playerId}/join-room', [RoomPlayerController::class, 'joinPlayerByRoomCode']);
+
 Route::get('room-players/{playerId}/stats', [RoomPlayerController::class, 'stats']);
 Route::get('room-players/{playerId}/history', [RoomPlayerController::class, 'history']);
 

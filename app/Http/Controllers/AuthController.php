@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
@@ -79,5 +80,37 @@ class AuthController extends Controller
             ],
             200
         );
+    }
+
+    public function changePassword(Request $request, int $userId)
+    {
+        $rules = [
+            'old_password' => 'required|string',
+            'password' => 'required|string|confirmed',
+        ];
+
+        $validator = Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 400);
+        }
+        $user = User::where('id', $userId)->first();
+        if (!$user) {
+            return response()->json([
+                'message' => 'User does not exists with the ID ' . $userId,
+            ], 400);
+        }
+        if (Hash::check($request->all()['old_password'], $user->password)) {
+            $user->update([
+                'password' => Hash::make($request->all()['password']),
+            ]);
+            return response()->json([
+                'message' => 'Success',
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Old password does not match your current password',
+        ], 400);
     }
 }

@@ -8,16 +8,37 @@ use App\Http\Requests\UpdateRoomPlayerRequest;
 use App\Models\Room;
 use App\Models\User;
 use App\Services\RoomPlayerServices\RoomPlayerService;
+use App\Services\RoomServices\RoomService;
+use App\Services\UserServices\UserService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class RoomPlayerController extends Controller
 {
     private RoomPlayer $roomPlayerModel;
     private RoomPlayerService $roomPlayerService;
 
-    public function __construct(RoomPlayerService $roomPlayerService, RoomPlayer $roomPlayerModel)
-    {
+    private Room $roomModel;
+    private RoomService $roomService;
+
+    private User $userModel;
+    private UserService $userService;
+
+
+    public function __construct(
+        RoomPlayerService $roomPlayerService,
+        RoomPlayer $roomPlayerModel,
+        RoomService $roomService,
+        Room $roomModel,
+        User $userModel,
+        UserService $userService,
+    ) {
         $this->roomPlayerModel = $roomPlayerModel;
         $this->roomPlayerService = $roomPlayerService;
+        $this->roomModel = $roomModel;
+        $this->roomService = $roomService;
+        $this->userModel = $userModel;
+        $this->userService = $userService;
     }
 
     public function index()
@@ -180,6 +201,60 @@ class RoomPlayerController extends Controller
     }
 
 
+    public function joinPlayerByRoomCode(Request $request, int $playerId)
+    {
+        $rules = [
+            'room_code' => 'required|string|exists:rooms,code',
+        ];
+        $messages = [
+            'room_code.required' => 'The room code is required.',
+            'room_code.string' => 'The room code must be a string.',
+            'room_code.exists' => 'The provided room code does not exist.',
+        ];
+        $validator = Validator::make($request->all(), $rules, $messages);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 400);
+        }
+
+        $room = $this->roomService->getRoomByCode($request->all()['room_code'], $this->roomModel);
+        if (!$room) {
+            return response([
+                'message' => 'Room does not exists with the code ' . $request->all()['room_code'],
+            ], 400);
+        }
+        $player = $this->userService->getUserById($playerId, $this->userModel);
+        if (!$player) {
+            return response([
+                'message' => 'Player does not exists with the ID ' . $playerId,
+            ], 400);
+        }
+
+        $roomPlayer = $this->roomPlayerModel::where('room_id', $room->id)
+            ->where('user_id', $player->id)->first();
+
+        if (!$roomPlayer) {
+            $roomPlayer = $this->roomPlayerService->createRoomPlayer(
+                [
+                    'score' => 0,
+                    'rank' => 0,
+                    'user_id' => $playerId,
+                    'room_id' => $room->id,
+                ],
+                $this->roomPlayerModel,
+            );
+            return response($roomPlayer);
+        }
+        if (!$roomPlayer->kicked) {
+            $roomPlayer->left = 0;
+            $roomPlayer->save();
+            return response($roomPlayer);
+        }
+
+        return response([
+            'message' => 'Player ' . $playerId . ' is kicked from the room'
+        ], 400);
+    }
 
     public function stats(int $playerId)
     {

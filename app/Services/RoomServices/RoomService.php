@@ -33,6 +33,12 @@ class RoomService
         return $roomModel::where('id', $id)->first();
     }
 
+    public function getRoomByCode(string $code, Room $roomModel)
+    {
+        return $roomModel::where('code', $code)->first();
+    }
+
+
     public function getRoom(Room $roomModel): Collection
     {
         return $roomModel::all();
