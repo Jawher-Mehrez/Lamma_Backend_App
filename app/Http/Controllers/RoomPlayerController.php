@@ -133,6 +133,8 @@ class RoomPlayerController extends Controller
 
         $roomPlayer->kicked = 1;
         $roomPlayer->save();
+        $notification = 'You have been kicked from this room "' . $room->name . '"';
+        $this->roomService->notification($player, $notification, 'kick');
 
         return response([
             "message" => "success",
@@ -151,6 +153,8 @@ class RoomPlayerController extends Controller
 
         $roomPlayer->left = 1;
         $roomPlayer->save();
+        $notification = 'You left from this room "' . $room->name . '"';
+        $this->roomService->notification($player, $notification, 'leave');
 
         return response([
             "message" => "success",
@@ -169,35 +173,36 @@ class RoomPlayerController extends Controller
             ], 400);
         }
 
+        $roomPlayers = $this->roomPlayerModel::where('room_id', $room->id)->get();
+
         $roomPlayer = $this->roomPlayerModel::where('room_id', $room->id)->where('user_id', $player->id)->first();
 
-        if ($roomPlayer) {
-            $isKicked = $roomPlayer->kicked;
-            if ($isKicked) {
+        if (!$roomPlayer) {
+            if ($room->max_players === $roomPlayers->count()) {
                 return response([
-                    "message" => "You cannot join this room",
+                    "message" => "Room is full",
                 ], 400);
             }
-            $isLeft = $roomPlayer->left;
-            if ($isLeft) {
-                $roomPlayer->left = 0;
-                $roomPlayer->save();
-                return response([
-                    "message" => "success",
-                ], 200);
-            }
+            $roomPlayer = $this->roomPlayerService->createRoomPlayer(
+                [
+                    'score' => 0,
+                    'rank' => 0,
+                    'user_id' => $playerId,
+                    'room_id' => $room->id,
+                ],
+                $this->roomPlayerModel,
+            );
+            return response($room);
+        }
+        if (!$roomPlayer->kicked) {
+            $roomPlayer->left = 0;
+            $roomPlayer->save();
+            return response($room);
         }
 
-        $this->roomPlayerService->createRoomPlayer([
-            'user_id' => $playerId,
-            'room_id' => $roomId,
-            'score' => 0,
-            'rank' => 0
-        ], $this->roomPlayerModel);
-
         return response([
-            "message" => "success",
-        ]);
+            'message' => 'Player ' . $playerId . ' is kicked from the room'
+        ], 400);
     }
 
 
@@ -243,12 +248,12 @@ class RoomPlayerController extends Controller
                 ],
                 $this->roomPlayerModel,
             );
-            return response($roomPlayer);
+            return response($room);
         }
         if (!$roomPlayer->kicked) {
             $roomPlayer->left = 0;
             $roomPlayer->save();
-            return response($roomPlayer);
+            return response($room);
         }
 
         return response([

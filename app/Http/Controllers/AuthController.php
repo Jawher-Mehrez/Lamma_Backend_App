@@ -113,4 +113,31 @@ class AuthController extends Controller
             'message' => 'Old password does not match your current password',
         ], 400);
     }
+
+    public function login(Request $request)
+    {
+        $rules = [
+            'email' => 'required|email|exists:users,email',
+            'password' => 'required|string',
+        ];
+
+        $validator = Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 400);
+        }
+        $user = User::where('email', $request->all()['email'])->first();
+        if (Hash::check($request->all()['password'], $user->password)) {
+            return response([
+                'status' => 'success',
+                'message' => 'Welcome ' . $user->username,
+                'data' => $user
+            ]);
+        }
+        return response([
+            'status' => 'failed',
+            'message' => 'Email or password is inccorect',
+            'data' => null
+        ]);
+    }
 }

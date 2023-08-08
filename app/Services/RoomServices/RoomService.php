@@ -3,11 +3,27 @@
 namespace App\Services\RoomServices;
 
 use App\Models\Room;
+use App\Models\User;
+use App\Notifications\RoomNotification;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Notification;
 
 class RoomService
 {
 
+    public function notification(User $player, string $notification, string $action): int
+    {
+        $data = [
+            'greeting' => 'Salutation',
+            'body' => $notification,
+            'thanks' => 'Merci',
+            'message' => $notification,
+            'to' => $player->id,
+            'action' => $action,
+        ];
+        Notification::send($player, new RoomNotification($data));
+        return 1;
+    }
     public function createRoom(array $data, Room $roomModel)
     {
         $data['code'] = $this->getNextRoomCode($roomModel);

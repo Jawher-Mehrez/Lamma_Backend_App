@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Room;
 use App\Http\Requests\StoreRoomRequest;
 use App\Http\Requests\UpdateRoomRequest;
+use App\Models\RoomPlayer;
 use App\Services\RoomServices\RoomService;
 use Illuminate\Http\Request;
 
@@ -20,7 +21,7 @@ class RoomController extends Controller
     }
     public function index(Request $request)
     {
-        return $this->roomModel::filter($request->all())->get();
+        return $this->roomModel::where('status', 'active')->filter($request->all())->get();
     }
 
 
@@ -69,6 +70,14 @@ class RoomController extends Controller
             $room,
             $request->validated(),
         );
+        if ($request->validated()['status'] === 'closed') {
+            $notification = 'Room "' . $room->name . '" has been closed';
+            $roomPlayers = RoomPlayer::where('room_id', $room->id)->get();
+            foreach ($roomPlayers as $roomPlayer) {
+                $this->roomService->notification($roomPlayer->player, $notification, 'room Closed');
+            }
+        }
+
         return response($room);
     }
 

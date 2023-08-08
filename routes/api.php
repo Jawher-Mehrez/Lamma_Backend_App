@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Route;
 // });
 
 Route::get('auth/request-key', [AuthController::class, 'sendEmail']);
+Route::post('auth/login', [AuthController::class, 'login']);
 Route::put('auth/recover-password', [AuthController::class, 'resetPassowrd']);
 //change password
 Route::put('auth/{userId}/change-password', [AuthController::class, 'changePassword']);
